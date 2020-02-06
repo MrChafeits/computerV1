@@ -46,16 +46,10 @@ case class Parser(input: String) {
 
 case class Quadratic(a: Double, b: Double, c: Double) {
   def solve(): (Option[Double], Option[Double]) = {
-    val + = (a:Double, b:Double) => a + b
-    val - = (a:Double, b:Double) => a - b
-
-    def aux(n: Double)(fn: (Double, Double) => Double): Double =
-      (fn(-b, pow(n, 0.5)) / (2.0 * a))
-
     b * b - 4.0 * a * c match {
       case n if n > 0.0 => (
-        Some(aux(n) (+)),
-        Some(aux(n) (-)))
+        Some((-b + pow(n, 0.5)) / (2.0 * a)),
+        Some((-b - pow(n, 0.5)) / (2.0 * a)))
       case 0 => (
         Some((-b / (2.0 * a))),
         None)
