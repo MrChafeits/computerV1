@@ -3,6 +3,8 @@ package computor
 import scala.util.{Try, Success, Failure}
 import scala.math.pow
 import scala.collection._
+import scala.util.parsing.combinator._
+import scala.util.parsing.input.Positional
 
 /*
  * input string: "5 * X^0 + 4 * X^1 - 9.3 * X^2 = 1 * X^0"
@@ -18,14 +20,26 @@ import scala.collection._
  * To lists of pairs
  * Of things and strings
  */
-/* Basic Minimum Grammar
+/* -- Requirements --
+ *  solve polynomial equations of degree <= 2
+ *  display reduced form of equation with valid degree
+ *  the solution as well as the sign of the discriminant when necessary
+ * -- Explicit Bonuses --
+ *
+ * Basic Minimum Grammar
  * %%
- * Expr          ::= Term "+" Expr | Term "-" Expr | Term
- * Term          ::= Coeff " * " Indeterminate "^" Exponent
- * Coeff         ::= Number
- * Exponent      ::= Integer
- * Indeterminate ::= "X"
- * Number        ::= a
+ * expr     ::= term \{"+" term | "-" term\}
+ * term     ::= factor \{"*" factor | "/" factor\}
+ * factor   ::= floatingPointNumber
+ * exponent ::= variable "^" [0-2]
+ * variable ::= "X"
+ * %%old
+ * Expr     ::= Term " + " Expr | Term " - " Expr | Term
+ * Term     ::= Coeff " * " Variable "^" Exponent
+ * Coeff    ::= Number
+ * Exponent ::= Integer
+ * Variable ::= "X"
+ * Number   ::= a
  */
 
 case class Term(coefficient: Double, exponent: Int) {
@@ -35,13 +49,43 @@ case class Term(coefficient: Double, exponent: Int) {
   def unary_-(): Term = Term(-coefficient, exponent)
 }
 
-case class Parser(input: String) {
-  def toPolynomial(): Try[Polynomial] = {
-    Success(
-      Polynomial(Seq(Term(5.0,0), Term(4.0,1), Term(-9.3,2)),
-      Seq(Term(1.0, 0)))
-    )
+// TODO: move parser to separate file
+class PolynomialLexer extends JavaTokenParsers {
+  override def skipWhitespace = true
+  def polynomial: Parser[Polynomial] = {
+    ((expression) ~ "=" ~ (expression)) ^^ {
+      case lhs ~ equ ~ rhs => Polynomial(lhs, rhs)
+    }
   }
+  def expression: Parser[List[Term]] = (rep1(term))
+  def coefficient: Parser[Double] = {
+    (opt("[+-]".r) ~ decimalNumber) ^^ {
+      case Some(op) ~ num => {
+        val coef: Double = num.toDouble
+        if (op == "-")
+          -coef
+        else
+          coef
+      }
+      case None ~ num => num.toDouble
+    }
+  }
+  def exponent: Parser[Int] = {
+    (variable ~ "^" ~ wholeNumber) ^^ {
+      case v ~ e ~ n => n.toInt
+    }
+  }
+  def term: Parser[Term] = {
+    ((coefficient) ~ "*" ~ (exponent)) ^^ {
+      case c ~ op ~ p => Term(c, p)
+    }
+  }
+  def variable: Parser[String] = "[A-Za-z]".r
+  // def toPolynomial(s: String): Try[Polynomial] = {
+  //   apply(s) match {
+  //     case (lhs, rhs) => Success(Polynomial(lhs, rhs))
+  //   }
+  // }
 }
 
 case class Quadratic(a: Double, b: Double, c: Double) {
@@ -70,7 +114,6 @@ case class Polynomial(lhs: Seq[Term], rhs: Seq[Term]) {
     val newleft = (lhs ++ rhs.map((t: Term) => -t))
     val l = newleft.foldLeft((Term(0, 0), Term(0, 1), Term(0, 2)))(combine)
     Polynomial(Seq(l._1, l._2, l._3), Seq())
-
   }
   // Reduce polynomial and send to Quadratic to solve
   def solve(): (Option[Double], Option[Double]) = {
