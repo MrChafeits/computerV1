@@ -1,2 +1,5 @@
-libraryDependencies += "org.scalatest" %% "scalatest" % "3.1.0" % "test"
-libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.1.2"
+lazy val scalaTestVersion = "3.1.0"
+lazy val scalaParserCombinatorsVersion = "1.1.2"
+
+libraryDependencies += "org.scalatest" %% "scalatest" % scalaTestVersion % "test"
+libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % scalaParserCombinatorsVersion
